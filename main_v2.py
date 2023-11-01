@@ -2,7 +2,8 @@ import streamlit as st
 import cv2
 import numpy as np
 import hand_detector as hd
-import pyautogui
+from pynput.mouse import Controller
+from pynput.mouse import Button
 
 # Set up your constants and variables
 wCam, hCam = 640, 480
@@ -10,12 +11,12 @@ frameR = 100
 smoothening = 7
 plocX, plocY = 0, 0
 
-# Initialize your OpenCV video capture using cv2.CAP_DSHOW
-cap = cv2.VideoCapture(cv2.CAP_DSHOW)
+# Initialize your OpenCV video capture, hand detector, and screen size
+cap = cv2.VideoCapture(0)
 cap.set(3, wCam)
 cap.set(4, hCam)
 detector = hd.handDetector(detectionCon=0.7)
-wScr, hScr = pyautogui.size()
+mouse = Controller()
 
 # Streamlit application
 st.title("Virtual Mouse")
@@ -43,15 +44,15 @@ while True:
         # Only Index Finger: Moving Mode
         if fingers[1] == 1 and fingers[2] == 0:
             # Convert Coordinates
-            x3 = np.interp(x1, (frameR, wCam - frameR), (0, wScr))
-            y3 = np.interp(y1, (frameR, hCam - frameR), (0, hScr))
+            x3 = np.interp(x1, (frameR, wCam - frameR), (0, wCam))
+            y3 = np.interp(y1, (frameR, hCam - frameR), (0, hCam))
 
             # Smoothen Values
             clocX = plocX + (x3 - plocX) / smoothening
             clocY = plocY + (y3 - plocY) / smoothening
 
             # Move Mouse with x-coordinate correctly adjusted
-            pyautogui.moveTo(clocX, clocY)
+            mouse.position = (clocX, clocY)
             cv2.circle(img, (x1, y1), 6, (255, 28, 0), cv2.FILLED)
             plocX, plocY = clocX, clocY
 
@@ -63,7 +64,7 @@ while True:
             # Click mouse if distance is short
             if length < 40:
                 cv2.circle(img, (lineInfo[4], lineInfo[5]), 6, (0, 255, 0), cv2.FILLED)
-                pyautogui.click()
+                mouse.click(Button.left, 1)  # Perform a left-click
 
     # Display the processed frame using Streamlit
     stframe.image(img, channels="BGR", use_column_width=True)
